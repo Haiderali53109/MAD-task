@@ -1,0 +1,438 @@
+import 'package:flutter/material.dart';
+
+void main() {
+  runApp(const SmartHomeApp());
+}
+
+class SmartHomeApp extends StatelessWidget {
+  const SmartHomeApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      title: 'Smart Home Dashboard',
+      theme: ThemeData(
+        primarySwatch: Colors.indigo,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      home: const DashboardPage(),
+    );
+  }
+}
+
+class Device {
+  String name;
+  String type; 
+  String room;
+  bool isOn;
+  double value; 
+  Device({
+    required this.name,
+    required this.type,
+    required this.room,
+    this.isOn = false,
+    this.value = 50.0,
+  });
+}
+
+class DashboardPage extends StatefulWidget {
+  const DashboardPage({Key? key}) : super(key: key);
+
+  @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  final List<Device> devices = [
+    Device(name: 'Living Room Light', type: 'Light', room: 'Living Room', isOn: true, value: 80),
+    Device(name: 'Bedroom Fan', type: 'Fan', room: 'Bedroom', isOn: false, value: 30),
+    Device(name: 'Hall AC', type: 'AC', room: 'Hall', isOn: true, value: 22),
+    Device(name: 'Front Door Cam', type: 'Camera', room: 'Entrance', isOn: true, value: 0),
+  ];
+
+  // helper to pick an icon depending on device type
+  IconData iconForType(String type) {
+    switch (type) {
+      case 'Light':
+        return Icons.lightbulb;
+      case 'Fan':
+        return Icons.toys;
+      case 'AC':
+        return Icons.ac_unit;
+      case 'Camera':
+        return Icons.videocam;
+      default:
+        return Icons.device_unknown;
+    }
+  }
+
+  Color colorForType(String type) {
+    switch (type) {
+      case 'Light':
+        return Colors.amber;
+      case 'Fan':
+        return Colors.blueGrey;
+      case 'AC':
+        return Colors.lightBlue;
+      case 'Camera':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  void _addDeviceDialog() {
+    final _formKey = GlobalKey<FormState>();
+    String name = '';
+    String type = 'Light';
+    String room = '';
+    bool isOn = false;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        // Use StatefulBuilder so the dialog can update its local state (isOn/type) properly
+        return StatefulBuilder(builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text('Add New Device'),
+            content: Form(
+              key: _formKey,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextFormField(
+                      decoration: const InputDecoration(labelText: 'Device Name'),
+                      onSaved: (v) => name = v?.trim() ?? '',
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter device name' : null,
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String>(
+                      value: type,
+                      items: const [
+                        DropdownMenuItem(value: 'Light', child: Text('Light')),
+                        DropdownMenuItem(value: 'Fan', child: Text('Fan')),
+                        DropdownMenuItem(value: 'AC', child: Text('AC')),
+                        DropdownMenuItem(value: 'Camera', child: Text('Camera')),
+                      ],
+                      onChanged: (v) => setStateDialog(() => type = v ?? 'Light'),
+                      decoration: const InputDecoration(labelText: 'Device Type'),
+                    ),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      decoration: const InputDecoration(labelText: 'Room Name'),
+                      onSaved: (v) => room = v?.trim() ?? '',
+                      validator: (v) => (v == null || v.trim().isEmpty) ? 'Please enter room name' : null,
+                    ),
+                    const SizedBox(height: 8),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      title: const Text('Start as ON'),
+                      value: isOn,
+                      onChanged: (v) => setStateDialog(() => isOn = v),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Cancel')),
+              ElevatedButton(
+                onPressed: () {
+                  final form = _formKey.currentState;
+                  if (form == null) return;
+                  if (form.validate()) {
+                    form.save();
+                    setState(() {
+                      devices.add(Device(
+                          name: name,
+                          type: type,
+                          room: room,
+                          isOn: isOn,
+                          value: (type == 'Light' || type == 'Fan') ? 50.0 : (type == 'AC' ? 22.0 : 0.0)));
+                    });
+                    Navigator.of(context).pop();
+                  }
+                },
+                child: const Text('Add'),
+              ),
+            ],
+          );
+        });
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () {
+            // stub for menu
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Menu pressed')));
+          },
+        ),
+        title: const Text('Smart Home Dashboard'),
+        centerTitle: true,
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: GestureDetector(
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile tapped')));
+              },
+              child: const CircleAvatar(
+                backgroundImage: NetworkImage('https://picsum.photos/200'),
+              ),
+            ),
+          )
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          children: [
+            // Optional header or summary
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Devices', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                Text('${devices.length} items', style: const TextStyle(color: Colors.grey)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: GridView.builder(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 3 / 4,
+                ),
+                itemCount: devices.length,
+                itemBuilder: (context, index) {
+                  final d = devices[index];
+                  return GestureDetector(
+                    onTap: () async {
+                      // Navigate to details screen and await possible updates
+                      final updated = await Navigator.push<Device?>(
+                        context,
+                        MaterialPageRoute(builder: (_) => DeviceDetailsPage(device: d)),
+                      );
+                      // If returned a device (modified), update list
+                      if (updated != null) {
+                        setState(() {
+                          devices[index] = updated;
+                        });
+                      }
+                    },
+                    child: Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 4,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                CircleAvatar(
+                                  backgroundColor: colorForType(d.type).withOpacity(0.2),
+                                  child: Icon(iconForType(d.type), color: colorForType(d.type)),
+                                ),
+                                Switch(
+                                  value: d.isOn,
+                                  onChanged: (v) => setState(() => d.isOn = v),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(d.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            const SizedBox(height: 6),
+                            Text(d.room, style: const TextStyle(color: Colors.grey)),
+                            const Spacer(),
+                            Text(
+                              _statusText(d),
+                              style: TextStyle(color: d.isOn ? Colors.green : Colors.red, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addDeviceDialog,
+        child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  String _statusText(Device d) {
+    switch (d.type) {
+      case 'Light':
+        return d.isOn ? 'Light is ON' : 'Light is OFF';
+      case 'Fan':
+        return d.isOn ? 'Fan is ON' : 'Fan is OFF';
+      case 'AC':
+        return d.isOn ? 'AC is ON' : 'AC is OFF';
+      case 'Camera':
+        return d.isOn ? 'Camera is ACTIVE' : 'Camera is OFF';
+      default:
+        return d.isOn ? 'Device is ON' : 'Device is OFF';
+    }
+  }
+}
+
+class DeviceDetailsPage extends StatefulWidget {
+  final Device device;
+  const DeviceDetailsPage({Key? key, required this.device}) : super(key: key);
+
+  @override
+  State<DeviceDetailsPage> createState() => _DeviceDetailsPageState();
+}
+
+class _DeviceDetailsPageState extends State<DeviceDetailsPage> {
+  late Device current;
+
+  @override
+  void initState() {
+    super.initState();
+    // Create a copy so changes are local until user presses back
+    current = Device(
+      name: widget.device.name,
+      type: widget.device.type,
+      room: widget.device.room,
+      isOn: widget.device.isOn,
+      value: widget.device.value,
+    );
+  }
+
+  IconData iconForType(String type) {
+    switch (type) {
+      case 'Light':
+        return Icons.lightbulb;
+      case 'Fan':
+        return Icons.toys;
+      case 'AC':
+        return Icons.ac_unit;
+      case 'Camera':
+        return Icons.videocam;
+      default:
+        return Icons.device_unknown;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(current.name),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            // Return updated device to previous screen
+            Navigator.of(context).pop(current);
+          },
+        ),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            CircleAvatar(
+              radius: 48,
+              backgroundColor: Colors.grey.shade200,
+              child: Icon(iconForType(current.type), size: 56, color: Theme.of(context).primaryColor),
+            ),
+            const SizedBox(height: 16),
+            Text(current.type, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Text(current.room, style: const TextStyle(color: Colors.grey)),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text('Status: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text(current.isOn ? 'ON' : 'OFF', style: TextStyle(color: current.isOn ? Colors.green : Colors.red)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            // Show slider for Light and Fan. For AC and Camera show different controls or none.
+            if (current.type == 'Light' || current.type == 'Fan') ...[
+              Text(current.type == 'Light' ? 'Brightness' : 'Speed', style: const TextStyle(fontWeight: FontWeight.bold)),
+              Slider(
+                min: 0,
+                max: 100,
+                divisions: 100,
+                value: current.value,
+                label: '${current.value.round()}',
+                onChanged: (v) => setState(() => current.value = v),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: () => setState(() => current.isOn = !current.isOn),
+                icon: Icon(current.isOn ? Icons.power_settings_new : Icons.power_off),
+                label: Text(current.isOn ? 'Turn OFF' : 'Turn ON'),
+              ),
+            ] else if (current.type == 'AC') ...[
+             
+              const Text('Temperature', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                      icon: const Icon(Icons.remove),
+                      onPressed: () => setState(() => current.value = ((current.value - 1).clamp(16.0, 30.0)).toDouble())),
+                  Text('${current.value.round()} °C', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () => setState(() => current.value = ((current.value + 1).clamp(16.0, 30.0)).toDouble())),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: () => setState(() => current.isOn = !current.isOn),
+                icon: Icon(current.isOn ? Icons.ac_unit : Icons.ac_unit_outlined),
+                label: Text(current.isOn ? 'Turn OFF' : 'Turn ON'),
+              ),
+            ] else if (current.type == 'Camera') ...[
+              const SizedBox(height: 8),
+              const Text('Camera live feed preview unavailable in demo', textAlign: TextAlign.center),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () => setState(() => current.isOn = !current.isOn),
+                icon: Icon(current.isOn ? Icons.videocam_off : Icons.videocam),
+                label: Text(current.isOn ? 'Disable Camera' : 'Enable Camera'),
+              ),
+            ],
+
+            const Spacer(),
+            // Save & go back button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  // Pop and return the modified device
+                  Navigator.of(context).pop(current);
+                },
+                child: const Text('Save & Back'),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
